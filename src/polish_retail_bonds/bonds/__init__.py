@@ -122,27 +122,27 @@ def create_tos_bond(
     # slightly...
     nominal_value = 100
     for period in range(3):
-        # Interest table periods stopped overlapping in TOS0526 emission
-        # but the way the actual interest is calculated has not changed.
-        # All periods but the first one start on the 2nd day to avoid overlap, i.e.:
-        # - 01.mm.yyya - 01.mm.yyyb
-        # - 02.mm.yyyb - 01.mm.yyyc
-        # - 02.mm.yyyc - 01.mm.yyyd
+        # Periods in the TOS interest tables do not actually overlap (since TOS0526
+        # emission) *but* the way the actual interest is calculated is more intuitive
+        # with overlapping periods.
         period_start = bond.sale_from.replace(
             year=bond.sale_from.year + period
-        ) + datetime.timedelta(days=period != 0)
-        period_end = period_start.replace(year=period_start.year + 1, day=1)
+        )
+        period_end = period_start.replace(year=period_start.year + 1)
         # Number of interest-eligible days in the period to put in the formula.
-        # First day of the first period has to be excluded since there's no interest
-        # on the day of the purchase to have yet.
+        # First day of each period has to be excluded since it's either:
+        # - value at the date of the purchase (interest accrues starting on day 2)
+        # - value at the end of the previous period
         # Basically, the value on day N is the interest for the days that elapsed (N-1).
-        period_days = (period_end - period_start).days + (period != 0)
+        period_days = (period_end - period_start).days
 
-        # First period includes the day of the purchase (not eligible for interest).
-        # We need to include that day's value in the values
-        # which just means starting from day 0 rather than 1.
+        # First day of the period is the last day of the previous period so it has to
+        # be excluded unless this is the first period.
+        # `day_count == 0` for the first day of each period so the interest will be 0
+        # as expected for overlapping periods.
         for day_count in range(period != 0, period_days + 1):
-            multiplicand = 1 + bond.interest_rate[sale_from] * day_count / period_days
+            day_date = period_start + datetime.timedelta(days=day_count)
+            multiplicand = 1 + bond.interest_rate[day_date] * day_count / period_days
             day_value = nominal_value * multiplicand
             bond.values.append(round(day_value, 2))
 
