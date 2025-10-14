@@ -55,6 +55,7 @@ BOND_TYPES = {
 }
 
 
+# copied from `polish_retail_bonds.bonds.utils.add_months()`
 def add_months(date: datetime.date, month_count: int) -> datetime.date:
     year, month = divmod(date.month + month_count - 1, 12)
     year += date.year
