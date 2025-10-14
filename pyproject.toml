@@ -1,0 +1,40 @@
+[project]
+name = "polish-retail-bonds"
+version = "0.1.0"
+description = "Fetch, parse, and output data about Polish retail bonds."
+readme = "README.md"
+authors = [
+    { name = "Jakub Kuczys", email = "me@jacken.men" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "niquests>=3.15.2",
+    "pypdfium2>=4.30.0",
+    "xlrd>=2.0.2",
+]
+
+[project.scripts]
+polish-retail-bonds = "polish_retail_bonds.__main__:main"
+
+[build-system]
+requires = ["uv_build>=0.9.2,<0.10.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.2",
+    "ruff>=0.14.0",
+]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = [
+    "--import-mode=importlib",
+]
+python_files = [
+    "*_test.py",
+    "*_test_utils.py",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
