@@ -4,6 +4,7 @@ from decimal import Decimal
 from pathlib import Path
 
 from polish_retail_bonds.bonds import Bond, InterestPeriod, InterestRate
+from polish_retail_bonds.bonds.utils import add_months
 
 DATASETS_DIR = Path(__file__).parent.absolute() / "data"
 
@@ -28,16 +29,13 @@ def load_test_cases(filename: str) -> Bond:
             last_processed_value = Decimal(0)
             interest_rates = []
             interest_periods = []
+            months_per_period = 12 if is_yearly else 1
 
             for period, period_line in zip(range(period_count), it):
                 period_line = period_line.strip()
                 if not period_line:
-                    period_start = series_sale_from.replace(
-                        year=series_sale_from.year + period
-                    )
-                    period_end = series_sale_from.replace(
-                        year=series_sale_from.year + period + 1
-                    )
+                    period_start = add_months(series_sale_from, period * months_per_period)
+                    period_end = add_months(series_sale_from, (period + 1) * months_per_period)
                     interest_periods.append(InterestPeriod(period_start, period_end))
                     continue
                 period_parts = period_line.split(";")
@@ -83,22 +81,25 @@ def assert_common_bond_traits(bond: Bond) -> None:
         a + b for a, b in zip(bond.accrued_interest_values, bond.paid_interest_values)
     ]
 
+    actual_total_values = bond.total_values
+    actual_total_redemption_values = bond.total_redemption_values
+
     # number of values should be equal to number of days
     # between sale and redemption date
     expected_length = (bond.interest_rate.end - bond.sale_from).days + 1
     assert len(bond.earned_interest_values) == expected_length
     assert len(bond.accrued_interest_values) == expected_length
     assert len(bond.paid_interest_values) == expected_length
-    assert len(bond.total_values) == expected_length
-    assert len(bond.total_redemption_values) == expected_length
+    assert len(actual_total_values) == expected_length
+    assert len(actual_total_redemption_values) == expected_length
 
     # number of decimal points should never exceed 2
     ndigits = 2
     assert_decimal_digits(bond.earned_interest_values, ndigits)
     assert_decimal_digits(bond.accrued_interest_values, ndigits)
     assert_decimal_digits(bond.paid_interest_values, ndigits)
-    assert_decimal_digits(bond.total_values, ndigits)
-    assert_decimal_digits(bond.total_redemption_values, ndigits)
+    assert_decimal_digits(actual_total_values, ndigits)
+    assert_decimal_digits(actual_total_redemption_values, ndigits)
     for period in bond.interest_periods:
         assert_decimal_digits(period, ndigits)
     assert_decimal_digits((bond.early_redemption_cost,), ndigits)
@@ -108,12 +109,22 @@ def assert_common_bond_traits(bond: Bond) -> None:
     # total interest is the interest earned until redemption date
     assert bond.total_interest == bond.earned_interest_values.values[-1]
 
+    first_period = bond.interest_periods[0]
+    # bond's redemption value cannot be lower than nominal value in first period
+    assert all(
+        value >= bond.nominal_value
+        for value in actual_total_redemption_values[first_period.start:first_period.end]
+    )
+
     # difference between bond value and its actual redemption value should be equal to
     # its early redemption cost
-    actual_redemption_value = bond.total_redemption_values.values[-2]
+    day_before_end = actual_total_redemption_values.end - datetime.timedelta(days=1)
+    actual_redemption_value = actual_total_redemption_values[day_before_end]
     expected_redemption_value = (
-        bond.total_values.values[-2] - bond.early_redemption_cost
+        actual_total_values[day_before_end] - bond.early_redemption_cost
     )
+    if first_period.start <= day_before_end <= first_period.end:
+        expected_redemption_value = max(bond.nominal_value, expected_redemption_value)
     assert actual_redemption_value == expected_redemption_value
 
 
@@ -127,6 +138,7 @@ def assert_simple_interest_bond_traits(bond: Bond) -> None:
     ]
     actual_accrued_interest_values = bond.accrued_interest_values
     actual_paid_interest_values = bond.paid_interest_values
+    actual_total_redemption_values = bond.total_redemption_values
     for idx, period in enumerate(periods_with_known_interest):
         # accrued interest on the last day of the period should be 0 (as it's paid out)
         assert actual_accrued_interest_values[period.end] == 0
@@ -155,7 +167,13 @@ def assert_simple_interest_bond_traits(bond: Bond) -> None:
             if period.end == bond.redemption_date
             else bond.nominal_value - bond.early_redemption_cost
         )
-        assert bond.total_redemption_values[period.end] == expected_redemption_value
+        assert actual_total_redemption_values[period.end] == expected_redemption_value
+
+    # bond's redemption value at the end of first period should be its nominal value
+    # minus its early redemption cost
+    first_period = bond.interest_periods[0]
+    expected_redemption_value = bond.nominal_value - bond.early_redemption_cost
+    assert actual_total_redemption_values[first_period.end] == expected_redemption_value
 
 
 def assert_compound_interest_bond_traits(bond: Bond) -> None:
@@ -169,16 +187,26 @@ def assert_compound_interest_bond_traits(bond: Bond) -> None:
     # paid interest is zero on all days for bonds with compound interest
     assert all(value == 0.0 for value in bond.paid_interest_values)
 
+    actual_total_values = bond.total_values
+    actual_total_redemption_values = bond.total_redemption_values
     # last value in total values should be equal to
     # a sum of bond's nominal value and total interest
     expected_total_value = bond.nominal_value + bond.total_interest
-    assert bond.total_values.values[-1] == expected_total_value
+    assert actual_total_values.values[-1] == expected_total_value
     expected_redemption_value = (
         expected_total_value - bond.early_redemption_cost
         if bond.has_missing_interest_rates
         else expected_total_value
     )
-    assert bond.total_redemption_values.values[-1] == expected_redemption_value
+    assert actual_total_redemption_values.values[-1] == expected_redemption_value
+
+    # difference between bond value and its actual redemption value
+    # at the end of first period should be equal to its early redemption cost
+    first_period = bond.interest_periods[0]
+    expected_redemption_value = (
+        actual_total_values[first_period.end] - bond.early_redemption_cost
+    )
+    assert actual_total_redemption_values[first_period.end] == expected_redemption_value
 
 
 def assert_decimal_digits(iterable: Iterable[Decimal], ndigits: int) -> None:
