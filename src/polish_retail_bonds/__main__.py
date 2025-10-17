@@ -1,4 +1,5 @@
 import argparse
+import calendar
 import dataclasses
 import datetime
 import logging
@@ -373,6 +374,48 @@ class App:
             extractor = extractor_cls(book, self.get_bond_pdf)
             print("Extracting", extractor.TYPE_NAME, "bonds...")
             bonds[extractor.TYPE_NAME] = extractor.extract_bonds()
+        for bond_type, extracted_bonds in bonds.items():
+            with open(f"blah/{bond_type.lower()}.csv", "w", newline="\n") as fp:
+                for bond in extracted_bonds:
+                    if bond.sale_from < datetime.date(2022, 10, 1):
+                        continue
+                    period_symbol = "M" if bond.type_name in ("ROR", "DOR") else "Y"
+                    interest_symbol = "C" if bond.has_compound_interest else "S"
+                    sale_to = bond.sale_to
+                    if calendar.monthrange(sale_to.year, sale_to.month)[1] == 29:
+                        sale_to = sale_to.replace(day=29)
+                    print(
+                        f"{bond.series_name};{bond.sale_from};{sale_to};"
+                        f"{bond.redemption_date};{period_symbol};"
+                        f"{len(bond.interest_periods)};{interest_symbol}",
+                        file=fp,
+                    )
+                    base_value = Decimal(0)
+                    for period in bond.interest_periods:
+                        if not period.values:
+                            print(file=fp)
+                            continue
+                        start = period.start
+                        if (
+                            bond.has_compound_interest
+                            and start != bond.sale_from
+                            and bond.sale_from >= datetime.date(2023, 5, 1)
+                        ):
+                            start = start.replace(day=2)
+                        print(
+                            f"{start};{period.end};{bond.interest_rate[period.end]};",
+                            end="",
+                            file=fp,
+                        )
+                        values = (
+                            list(map(base_value.__add__, period.values))
+                            if bond.has_compound_interest
+                            else period.values
+                        )
+                        if bond.has_compound_interest and start.day != 1:
+                            values = values[1:]
+                        print(" ".join(map(str, map(float, values))), file=fp)
+                        base_value += period.total_interest
 
 
 def main() -> None:
