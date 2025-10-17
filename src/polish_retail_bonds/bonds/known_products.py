@@ -1,4 +1,5 @@
 import datetime
+from collections.abc import Iterable
 from decimal import Decimal
 from typing import Self, overload
 
@@ -13,21 +14,21 @@ def create_ror_bond(
     isin: str,
     sale_from: datetime.date,
     sale_to: datetime.date,
-    interest_rate: InterestRate | Decimal,
+    interest_rate: InterestRate | Iterable[Decimal],
 ) -> Bond:
-    redemption_date = sale_from.replace(year=sale_from.year + 1)
+    interest_periods = _generate_monthly_periods(sale_from, 1 * 12)
     bond = Bond(
         "ROR",
         series_name=series_name,
         isin=isin,
         sale_from=sale_from,
         sale_to=sale_to,
-        redemption_date=redemption_date,
-        interest_rate=_cast_to_interest_rate(sale_from, redemption_date, interest_rate),
+        redemption_date=sale_from.replace(year=sale_from.year + 1),
+        interest_rate=_cast_to_interest_rate(interest_periods, interest_rate),
         has_compound_interest=False,
         # this will be input argument in the future
         early_redemption_cost=Decimal("0.5"),
-        interest_periods=_generate_monthly_periods(sale_from, 1 * 12),
+        interest_periods=interest_periods,
     )
     _fill_values(bond, is_monthly=True)
     return bond
@@ -39,21 +40,21 @@ def create_dor_bond(
     isin: str,
     sale_from: datetime.date,
     sale_to: datetime.date,
-    interest_rate: InterestRate | Decimal,
+    interest_rate: InterestRate | Iterable[Decimal],
 ) -> Bond:
-    redemption_date = sale_from.replace(year=sale_from.year + 2)
+    interest_periods = _generate_monthly_periods(sale_from, 2 * 12)
     bond = Bond(
         "DOR",
         series_name=series_name,
         isin=isin,
         sale_from=sale_from,
         sale_to=sale_to,
-        redemption_date=redemption_date,
-        interest_rate=_cast_to_interest_rate(sale_from, redemption_date, interest_rate),
+        redemption_date=sale_from.replace(year=sale_from.year + 2),
+        interest_rate=_cast_to_interest_rate(interest_periods, interest_rate),
         has_compound_interest=False,
         # this will be input argument in the future
         early_redemption_cost=Decimal("0.7"),
-        interest_periods=_generate_monthly_periods(sale_from, 2 * 12),
+        interest_periods=interest_periods,
     )
     _fill_values(bond, is_monthly=True)
     return bond
@@ -67,15 +68,15 @@ def create_tos_bond(
     sale_to: datetime.date,
     interest_rate: InterestRate | Decimal,
 ) -> Bond:
-    redemption_date = sale_from.replace(year=sale_from.year + 3)
+    interest_periods = _generate_yearly_periods(sale_from, 3)
     bond = Bond(
         "TOS",
         series_name=series_name,
         isin=isin,
         sale_from=sale_from,
         sale_to=sale_to,
-        redemption_date=redemption_date,
-        interest_rate=_cast_to_interest_rate(sale_from, redemption_date, interest_rate),
+        redemption_date=sale_from.replace(year=sale_from.year + 3),
+        interest_rate=_cast_to_interest_rate(interest_periods, interest_rate),
         has_compound_interest=True,
         # this will be input argument in the future
         early_redemption_cost=(
@@ -83,7 +84,7 @@ def create_tos_bond(
             if datetime.date(2015, 4, 1) <= sale_from <= datetime.date(2024, 8, 31)
             else Decimal(1)
         ),
-        interest_periods=_generate_yearly_periods(sale_from, 3),
+        interest_periods=interest_periods,
     )
     _fill_values(bond)
     return bond
@@ -95,17 +96,17 @@ def create_coi_bond(
     isin: str,
     sale_from: datetime.date,
     sale_to: datetime.date,
-    interest_rate: InterestRate | Decimal,
+    interest_rate: InterestRate | Iterable[Decimal],
 ) -> Bond:
-    redemption_date = sale_from.replace(year=sale_from.year + 4)
+    interest_periods = _generate_yearly_periods(sale_from, 4)
     bond = Bond(
         "COI",
         series_name=series_name,
         isin=isin,
         sale_from=sale_from,
         sale_to=sale_to,
-        redemption_date=redemption_date,
-        interest_rate=_cast_to_interest_rate(sale_from, redemption_date, interest_rate),
+        redemption_date=sale_from.replace(year=sale_from.year + 4),
+        interest_rate=_cast_to_interest_rate(interest_periods, interest_rate),
         has_compound_interest=False,
         # this will be input argument in the future
         early_redemption_cost=(
@@ -125,7 +126,7 @@ def create_coi_bond(
             if sale_from >= datetime.date(2002, 2, 1)
             else Decimal(3)
         ),
-        interest_periods=_generate_yearly_periods(sale_from, 4),
+        interest_periods=interest_periods,
     )
     _fill_values(bond)
     return bond
@@ -137,17 +138,17 @@ def create_edo_bond(
     isin: str,
     sale_from: datetime.date,
     sale_to: datetime.date,
-    interest_rate: InterestRate | Decimal,
+    interest_rate: InterestRate | Iterable[Decimal],
 ) -> Bond:
-    redemption_date = sale_from.replace(year=sale_from.year + 10)
+    interest_periods = _generate_yearly_periods(sale_from, 10)
     bond = Bond(
         "EDO",
         series_name=series_name,
         isin=isin,
         sale_from=sale_from,
         sale_to=sale_to,
-        redemption_date=redemption_date,
-        interest_rate=_cast_to_interest_rate(sale_from, redemption_date, interest_rate),
+        redemption_date=sale_from.replace(year=sale_from.year + 10),
+        interest_rate=_cast_to_interest_rate(interest_periods, interest_rate),
         has_compound_interest=True,
         # this will be input argument in the future
         early_redemption_cost=(
@@ -157,7 +158,7 @@ def create_edo_bond(
             if sale_from >= datetime.date(2010, 5, 1)
             else Decimal(1)
         ),
-        interest_periods=_generate_yearly_periods(sale_from, 10),
+        interest_periods=interest_periods,
     )
     _fill_values(bond)
     return bond
@@ -169,25 +170,23 @@ def create_ros_bond(
     isin: str,
     sale_from: datetime.date,
     sale_to: datetime.date,
-    interest_rate: InterestRate | Decimal,
+    interest_rate: InterestRate | Iterable[Decimal],
 ) -> Bond:
-    redemption_date = sale_from.replace(year=sale_from.year + 6)
+    interest_periods = _generate_yearly_periods(sale_from, 6)
     bond = Bond(
         "ROS",
         series_name=series_name,
         isin=isin,
         sale_from=sale_from,
         sale_to=sale_to,
-        redemption_date=redemption_date,
-        interest_rate=_cast_to_interest_rate(sale_from, redemption_date, interest_rate),
+        redemption_date=sale_from.replace(year=sale_from.year + 6),
+        interest_rate=_cast_to_interest_rate(interest_periods, interest_rate),
         has_compound_interest=True,
         # this will be input argument in the future
         early_redemption_cost=(
-            Decimal(2)
-            if sale_from >= datetime.date(2024, 9, 1)
-            else Decimal("0.7")
+            Decimal(2) if sale_from >= datetime.date(2024, 9, 1) else Decimal("0.7")
         ),
-        interest_periods=_generate_yearly_periods(sale_from, 6),
+        interest_periods=interest_periods,
     )
     _fill_values(bond)
     return bond
@@ -199,38 +198,44 @@ def create_rod_bond(
     isin: str,
     sale_from: datetime.date,
     sale_to: datetime.date,
-    interest_rate: InterestRate | Decimal,
+    interest_rate: InterestRate | Iterable[Decimal],
 ) -> Bond:
-    redemption_date = sale_from.replace(year=sale_from.year + 12)
+    interest_periods = _generate_yearly_periods(sale_from, 12)
     bond = Bond(
         "ROD",
         series_name=series_name,
         isin=isin,
         sale_from=sale_from,
         sale_to=sale_to,
-        redemption_date=redemption_date,
-        interest_rate=_cast_to_interest_rate(sale_from, redemption_date, interest_rate),
+        redemption_date=sale_from.replace(year=sale_from.year + 12),
+        interest_rate=_cast_to_interest_rate(interest_periods, interest_rate),
         has_compound_interest=True,
         # this will be input argument in the future
         early_redemption_cost=(
-            Decimal(3)
-            if sale_from >= datetime.date(2024, 9, 1)
-            else Decimal(2)
+            Decimal(3) if sale_from >= datetime.date(2024, 9, 1) else Decimal(2)
         ),
-        interest_periods=_generate_yearly_periods(sale_from, 12),
+        interest_periods=interest_periods,
     )
     _fill_values(bond)
     return bond
 
 
 def _cast_to_interest_rate(
-    sale_from: datetime.date,
-    redemption_date: datetime.date,
-    interest_rate: InterestRate | Decimal,
+    interest_periods: tuple[InterestPeriod, ...],
+    interest_rate: InterestRate | Iterable[Decimal] | Decimal,
 ) -> InterestRate:
     if isinstance(interest_rate, InterestRate):
         return interest_rate
-    return InterestRate((sale_from, redemption_date, interest_rate))
+    if isinstance(interest_rate, Decimal):
+        return InterestRate(
+            *((period.start, period.end, interest_rate) for period in interest_periods)
+        )
+    return InterestRate(
+        *(
+            (interest_periods[period_idx].start, interest_periods[period_idx].end, apr)
+            for period_idx, apr in enumerate(interest_rate)
+        )
+    )
 
 
 def _generate_monthly_periods(
