@@ -37,6 +37,7 @@ deprecateTypingAliases = true
 reportImplicitOverride = true
 # disabled rules from strict mode
 reportUnknownMemberType = false
+stubPath = "./stubs"
 
 [tool.pytest.ini_options]
 minversion = "8.0"
@@ -107,6 +108,9 @@ ignore = [
     "RUF022",
     # `assert` is expected to be used in code (to appease type checkers)
     "S101",
+]
+exclude = [
+    "stubs/**.py",
 ]
 preview = true
 explicit-preview-rules = true
