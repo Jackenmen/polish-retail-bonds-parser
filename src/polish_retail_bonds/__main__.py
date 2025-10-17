@@ -100,7 +100,7 @@ class BondExtractor(ABC):
     def get_interest_rates(self, row: list[xlrd.sheet.Cell]) -> Sequence[Decimal]:
         apr_col_idx = self._row_names.index("Oprocentowanie")
         return [
-            Decimal(str(cell.value))
+            Decimal(str(round(float(cell.value), 4)))
             for period_idx in range(self.INTEREST_RATE_COUNT)
             if (cell := row[apr_col_idx + period_idx]).ctype
         ]
