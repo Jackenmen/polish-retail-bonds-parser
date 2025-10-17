@@ -17,9 +17,8 @@ def test_ror_values(expected: bonds.Bond) -> None:
         sale_from=expected.sale_from,
         sale_to=expected.sale_to,
         interest_rate=expected.interest_rate,
+        early_redemption_cost=expected.early_redemption_cost,
     )
-    # ignore "expected" early redemption cost since test data doesn't have this info
-    expected.early_redemption_cost = actual.early_redemption_cost
 
     assert actual == expected
     bond_test_utils.assert_common_bond_traits(actual)
@@ -38,9 +37,8 @@ def test_dor_values(expected: bonds.Bond) -> None:
         sale_from=expected.sale_from,
         sale_to=expected.sale_to,
         interest_rate=expected.interest_rate,
+        early_redemption_cost=expected.early_redemption_cost,
     )
-    # ignore "expected" early redemption cost since test data doesn't have this info
-    expected.early_redemption_cost = actual.early_redemption_cost
 
     assert actual == expected
     bond_test_utils.assert_common_bond_traits(actual)
@@ -59,9 +57,8 @@ def test_tos_values(expected: bonds.Bond) -> None:
         sale_from=expected.sale_from,
         sale_to=expected.sale_to,
         interest_rate=expected.interest_rate,
+        early_redemption_cost=expected.early_redemption_cost,
     )
-    # ignore "expected" early redemption cost since test data doesn't have this info
-    expected.early_redemption_cost = actual.early_redemption_cost
 
     assert actual == expected
     bond_test_utils.assert_common_bond_traits(actual)
@@ -80,9 +77,8 @@ def test_coi_values(expected: bonds.Bond) -> None:
         sale_from=expected.sale_from,
         sale_to=expected.sale_to,
         interest_rate=expected.interest_rate,
+        early_redemption_cost=expected.early_redemption_cost,
     )
-    # ignore "expected" early redemption cost since test data doesn't have this info
-    expected.early_redemption_cost = actual.early_redemption_cost
 
     assert actual == expected
     bond_test_utils.assert_common_bond_traits(actual)
@@ -101,9 +97,8 @@ def test_edo_values(expected: bonds.Bond) -> None:
         sale_from=expected.sale_from,
         sale_to=expected.sale_to,
         interest_rate=expected.interest_rate,
+        early_redemption_cost=expected.early_redemption_cost,
     )
-    # ignore "expected" early redemption cost since test data doesn't have this info
-    expected.early_redemption_cost = actual.early_redemption_cost
 
     assert actual == expected
     bond_test_utils.assert_common_bond_traits(actual)
