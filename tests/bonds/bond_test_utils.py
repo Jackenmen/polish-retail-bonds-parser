@@ -1,5 +1,5 @@
 import datetime
-from collections.abc import Iterable
+from collections.abc import Generator, Iterable
 from decimal import Decimal
 from pathlib import Path
 
@@ -8,12 +8,14 @@ from polish_retail_bonds.bonds.utils import add_months
 
 DATASETS_DIR = Path(__file__).parent.absolute() / "data"
 
+type _InterestRatePeriod = tuple[datetime.date, datetime.date, Decimal]
+
 
 def bond_id(bond: Bond) -> str:
     return bond.series_name
 
 
-def load_test_cases(filename: str) -> Bond:
+def load_test_cases(filename: str) -> Generator[Bond]:
     with open(DATASETS_DIR / filename, encoding="utf-8") as fp:
         it = (line for line in fp if line)
         for line in it:
@@ -27,8 +29,8 @@ def load_test_cases(filename: str) -> Bond:
             has_compound_interest = series_parts[6] == "C"
             processed_until = series_sale_from
             last_processed_value = Decimal(0)
-            interest_rates = []
-            interest_periods = []
+            interest_rates: list[_InterestRatePeriod] = []
+            interest_periods: list[InterestPeriod] = []
             months_per_period = 12 if is_yearly else 1
 
             for period, period_line in zip(range(period_count), it):
@@ -148,7 +150,7 @@ def assert_simple_interest_bond_traits(bond: Bond) -> None:
     actual_accrued_interest_values = bond.accrued_interest_values
     actual_paid_interest_values = bond.paid_interest_values
     actual_total_redemption_values = bond.total_redemption_values
-    for idx, period in enumerate(periods_with_known_interest):
+    for period in periods_with_known_interest:
         # accrued interest on the last day of the period should be 0 (as it's paid out)
         assert actual_accrued_interest_values[period.end] == 0
 

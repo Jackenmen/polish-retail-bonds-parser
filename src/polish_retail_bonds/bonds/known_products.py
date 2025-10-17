@@ -287,6 +287,7 @@ def _fill_values(bond: Bond, *, is_monthly: bool = False) -> None:
 
         # `day_count == 0` for the first day of each period so the interest will be 0
         # as expected for overlapping periods.
+        day_value = base_value
         for day_count in range(0, period_days + 1):
             day_date = period.start + datetime.timedelta(days=day_count)
             multiplicand = 1 + bond.interest_rate[day_date] * day_count / denominator
@@ -296,5 +297,3 @@ def _fill_values(bond: Bond, *, is_monthly: bool = False) -> None:
         # Update nominal value for next period
         if bond.has_compound_interest:
             base_value = day_value
-
-    return bond

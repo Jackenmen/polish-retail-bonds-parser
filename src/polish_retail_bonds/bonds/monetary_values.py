@@ -1,6 +1,6 @@
 import dataclasses
 import datetime
-from collections.abc import Iterable
+from collections.abc import Iterator
 from decimal import Decimal
 from typing import overload
 
@@ -18,12 +18,12 @@ class MonetaryValues:
     end: datetime.date
     #: Values on each day this instance refers to.
     #: ``values[0]`` is value on the `start` day, values[-1] is value on the `end` day.
-    values: list[Decimal] = dataclasses.field(default_factory=list)
+    values: list[Decimal] = dataclasses.field(default_factory=list[Decimal])
 
     def __bool__(self) -> bool:
         return bool(self.values)
 
-    def __iter__(self) -> Iterable[Decimal]:
+    def __iter__(self) -> Iterator[Decimal]:
         return iter(self.values)
 
     def __len__(self) -> int:

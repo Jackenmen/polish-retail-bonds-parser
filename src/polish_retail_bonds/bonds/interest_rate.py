@@ -1,17 +1,19 @@
 import datetime
 from bisect import insort
 from decimal import Decimal
+from typing import override
+
+type _InterestRatePeriod = tuple[datetime.date, datetime.date, Decimal]
 
 
 class InterestRate:
-    def __init__(
-        self, *interest_periods: tuple[datetime.date, datetime.date, Decimal]
-    ) -> None:
-        self.interest_periods = ()
+    def __init__(self, *interest_periods: _InterestRatePeriod) -> None:
+        self.interest_periods: tuple[_InterestRatePeriod, ...] = ()
         for period in interest_periods:
             # calling this for each interest period is likely not the optimal approach
             self._add_interest_period(*period)
 
+    @override
     def __repr__(self) -> str:
         interest_periods_repr = ", ".join(map(repr, self.interest_periods))
         return f"{self.__class__.__name__}({interest_periods_repr})"
@@ -27,7 +29,7 @@ class InterestRate:
     def _add_interest_period(
         self, start: datetime.date, end: datetime.date, interest_rate: Decimal
     ) -> None:
-        interest_periods = []
+        interest_periods: list[_InterestRatePeriod] = []
         for period_start, period_end, period_interest_rate in self.interest_periods:
             if start > period_end or end < period_start:
                 # no overlap
@@ -36,7 +38,7 @@ class InterestRate:
                 )
                 continue
 
-            to_add = []
+            to_add: list[tuple[datetime.date, datetime.date]] = []
             if interest_rate == period_interest_rate:
                 start = min(start, period_start)
                 end = max(end, period_end)
@@ -79,7 +81,7 @@ class InterestRate:
         raise KeyError(key)
 
     def __contains__(self, key: datetime.date) -> bool:
-        for period_start, period_end, interest_rate in self.interest_periods:
+        for period_start, period_end, _ in self.interest_periods:
             if period_start <= key <= period_end:
                 return True
         return False

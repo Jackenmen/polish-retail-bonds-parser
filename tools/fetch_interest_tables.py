@@ -109,7 +109,7 @@ def fetch_bond_interest_tables(
             period_interest_rate = float(
                 Decimal(data["interestRatePercentage"][:-1].replace(",", ".")) / 100
             )
-            period_interest_values = []
+            period_interest_values: list[tuple[datetime.date, float]] = []
 
             for year_table in data["tables"]:
                 year = int(year_table["name"])
