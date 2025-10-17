@@ -1,7 +1,6 @@
 import datetime
 from collections.abc import Iterable
 from decimal import Decimal
-from typing import Self, overload
 
 from .bond import Bond, InterestPeriod
 from .interest_rate import InterestRate
