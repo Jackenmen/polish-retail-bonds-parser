@@ -129,7 +129,10 @@ def assert_common_bond_traits(bond: Bond) -> None:
     expected_redemption_value = (
         actual_total_values[day_before_end] - bond.early_redemption_cost
     )
-    if first_period.start <= day_before_end <= first_period.end:
+    if (
+        bond.has_compound_interest
+        or first_period.start <= day_before_end <= first_period.end
+    ):
         expected_redemption_value = max(bond.nominal_value, expected_redemption_value)
     assert actual_redemption_value == expected_redemption_value
 
@@ -209,8 +212,9 @@ def assert_compound_interest_bond_traits(bond: Bond) -> None:
     # difference between bond value and its actual redemption value
     # at the end of first period should be equal to its early redemption cost
     first_period = bond.interest_periods[0]
-    expected_redemption_value = (
-        actual_total_values[first_period.end] - bond.early_redemption_cost
+    expected_redemption_value = max(
+        actual_total_values[first_period.end] - bond.early_redemption_cost,
+        bond.nominal_value,
     )
     assert actual_total_redemption_values[first_period.end] == expected_redemption_value
 
