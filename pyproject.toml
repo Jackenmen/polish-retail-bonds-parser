@@ -22,9 +22,21 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
+    "pyright>=1.1.406",
     "pytest>=8.4.2",
     "ruff>=0.14.0",
 ]
+
+[tool.pyright]
+typeCheckingMode = "strict"
+# pyright really should just have these enabled by default, especially in strict mode...
+reportUnnecessaryTypeIgnoreComment = true
+reportUnreachable = true
+# opinionated
+deprecateTypingAliases = true
+reportImplicitOverride = true
+# disabled rules from strict mode
+reportUnknownMemberType = false
 
 [tool.pytest.ini_options]
 minversion = "8.0"
