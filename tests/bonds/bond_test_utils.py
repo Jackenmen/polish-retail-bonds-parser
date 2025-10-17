@@ -33,7 +33,7 @@ def load_test_cases(filename: str) -> Generator[Bond]:
             interest_periods: list[InterestPeriod] = []
             months_per_period = 12 if is_yearly else 1
 
-            for period, period_line in zip(range(period_count), it):
+            for period, period_line in zip(range(period_count), it, strict=False):
                 period_line = period_line.strip()
                 if not period_line:
                     period_start = add_months(
@@ -84,7 +84,10 @@ def assert_common_bond_traits(bond: Bond) -> None:
 
     # assert that earned_interest == (accrued_interest + paid_interest)
     assert bond.earned_interest_values.values == [
-        a + b for a, b in zip(bond.accrued_interest_values, bond.paid_interest_values)
+        a + b
+        for a, b in zip(
+            bond.accrued_interest_values, bond.paid_interest_values, strict=True
+        )
     ]
 
     actual_total_values = bond.total_values
