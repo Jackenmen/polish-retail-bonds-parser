@@ -56,7 +56,9 @@ class Bond:
         that will be paid in addition to bond's nominal value at redemption date.
         Otherwise, only periods with known interest rate are included.
         """
-        return sum(period.total_interest for period in self.interest_periods)
+        return sum(
+            (period.total_interest for period in self.interest_periods), Decimal()
+        )
 
     @property
     def earned_interest_values(self) -> MonetaryValues:

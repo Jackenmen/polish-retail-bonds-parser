@@ -44,7 +44,7 @@ class MonetaryValues:
             start = max(key.start, self.start)
             end = min(key.stop, self.end)
             if start >= end:
-                return MonetaryValues(key.start, key.end)
+                return MonetaryValues(key.start, key.stop)
             start_idx = (start - self.start).days
             end_idx = (end - self.start).days
             return MonetaryValues(key.start, key.stop, self.values[start_idx:end_idx])
