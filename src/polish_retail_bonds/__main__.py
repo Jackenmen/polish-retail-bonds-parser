@@ -1,7 +1,6 @@
 import argparse
 import dataclasses
 import datetime
-import json
 import logging
 import re
 from abc import ABC, abstractmethod
@@ -14,6 +13,7 @@ from types import TracebackType
 from typing import BinaryIO, ClassVar, Self, override
 
 import niquests
+import orjson
 import pypdfium2 as pdfium
 import xlrd
 
@@ -406,8 +406,8 @@ class App:
             metadata_path = month_dir / f"{bond.series_name}_metadata.json"
             new_metadata = bond.to_json_dict()
             try:
-                with open(metadata_path) as fp:
-                    old_metadata = json.load(fp)
+                with open(metadata_path, "rb") as fp:
+                    old_metadata = orjson.loads(fp.read())
             except FileNotFoundError:
                 pass
             else:
@@ -416,8 +416,8 @@ class App:
                     continue
 
             month_dir.mkdir(parents=True, exist_ok=True)
-            with open(metadata_path, "w") as fp:
-                json.dump(new_metadata, fp, separators=(",", ":"))
+            with open(metadata_path, "wb") as fp:
+                fp.write(orjson.dumps(new_metadata))
 
             for day_idx in range((bond.sale_to - bond.sale_from).days + 1):
                 offset = datetime.timedelta(days=day_idx)
@@ -429,9 +429,9 @@ class App:
                     for date, value in bond.total_redemption_values.iter_with_dates()
                 ]
                 with open(
-                    day_dir / f"{bond.series_name}_total_redemption_values.json", "w"
+                    day_dir / f"{bond.series_name}_total_redemption_values.json", "wb"
                 ) as fp:
-                    json.dump(data, fp, separators=(",", ":"))
+                    fp.write(orjson.dumps(data))
 
 
 def main() -> None:

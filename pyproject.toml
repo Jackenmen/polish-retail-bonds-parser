@@ -9,6 +9,7 @@ authors = [
 requires-python = ">=3.14"
 dependencies = [
     "niquests>=3.15.2",
+    "orjson>=3.11.3",
     "pypdfium2>=4.30.0",
     "xlrd>=2.0.2",
 ]
