@@ -1,6 +1,7 @@
 import dataclasses
 import datetime
 from decimal import Decimal
+from typing import Any, Self
 
 from .interest_rate import InterestRate
 from .monetary_values import MonetaryValues
@@ -38,6 +39,42 @@ class Bond:
     early_redemption_cost: Decimal
     interest_periods: tuple[InterestPeriod, ...]
     nominal_value: Decimal = Decimal(100)
+
+    def to_json_dict(self) -> dict[str, Any]:
+        return {
+            "type_name": self.type_name,
+            "series_name": self.series_name,
+            "isin": self.isin,
+            "sale_from": self.sale_from.isoformat(),
+            "sale_to": self.sale_to.isoformat(),
+            "redemption_date": self.redemption_date.isoformat(),
+            "interest_rate": self.interest_rate.to_json_list(),
+            "has_compound_interest": self.has_compound_interest,
+            "early_redemption_cost": str(self.early_redemption_cost),
+            "interest_periods": [
+                period.to_json_dict() for period in self.interest_periods
+            ],
+            "nominal_value": str(self.nominal_value),
+        }
+
+    @classmethod
+    def from_json_dict(cls, data: dict[str, Any], /) -> Self:
+        return cls(
+            type_name=data["type_name"],
+            series_name=data["series_name"],
+            isin=data["isin"],
+            sale_from=datetime.date.fromisoformat(data["sale_from"]),
+            sale_to=datetime.date.fromisoformat(data["sale_to"]),
+            redemption_date=datetime.date.fromisoformat(data["redemption_date"]),
+            interest_rate=InterestRate.from_json_list(data["interest_rate"]),
+            has_compound_interest=data["has_compound_interest"],
+            early_redemption_cost=Decimal(data["early_redemption_cost"]),
+            interest_periods=tuple(
+                InterestPeriod.from_json_dict(raw_period)
+                for raw_period in data["interest_periods"]
+            ),
+            nominal_value=Decimal(data["nominal_value"]),
+        )
 
     @property
     def has_missing_interest_rates(self) -> bool:

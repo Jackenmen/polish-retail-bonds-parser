@@ -1,7 +1,7 @@
 import datetime
 from bisect import insort
 from decimal import Decimal
-from typing import override
+from typing import Any, Self, override
 
 type _InterestRatePeriod = tuple[datetime.date, datetime.date, Decimal]
 
@@ -12,6 +12,29 @@ class InterestRate:
         for period in interest_periods:
             # calling this for each interest period is likely not the optimal approach
             self._add_interest_period(*period)
+
+    def to_json_list(self) -> list[dict[str, Any]]:
+        return [
+            {
+                "start": period[0].isoformat(),
+                "end": period[1].isoformat(),
+                "rate": str(period[2]),
+            }
+            for period in self.interest_periods
+        ]
+
+    @classmethod
+    def from_json_list(cls, data: list[dict[str, Any]], /) -> Self:
+        return cls(
+            *(
+                (
+                    datetime.date.fromisoformat(raw_period["start"]),
+                    datetime.date.fromisoformat(raw_period["stop"]),
+                    Decimal(raw_period["rate"]),
+                )
+                for raw_period in data
+            )
+        )
 
     @override
     def __repr__(self) -> str:

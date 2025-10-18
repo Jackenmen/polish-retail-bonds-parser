@@ -1,6 +1,7 @@
 import argparse
 import dataclasses
 import datetime
+import json
 import logging
 import re
 from abc import ABC, abstractmethod
@@ -250,6 +251,7 @@ class App:
         self._closed = False
         self._bonds_dataset_file: BinaryIO = BytesIO()
         self._bond_pdf_cache_dir = Path()
+        self._file_tree_output = Path()
         self.execution_params = ExecutionParams()
 
     def __enter__(self) -> Self:
@@ -283,12 +285,19 @@ class App:
             help="Path to the cache of bond PDF files.",
             required=True,
         )
+        parser.add_argument(
+            "--file-tree",
+            help="Path to the directory that the file tree should be output to.",
+            required=True,
+        )
         args = parser.parse_args()
         if args.bonds_dataset is not None:
             self._bonds_dataset_file = open(args.bonds_dataset, "rb")  # noqa: SIM115
             self.execution_params.download_dataset = False
         self._bond_pdf_cache_dir = Path(args.bond_pdf_cache)
         self._bond_pdf_cache_dir.mkdir(exist_ok=True)
+        self._file_tree_output = Path(args.file_tree)
+        self._file_tree_output.mkdir(exist_ok=True)
 
     def run(self) -> int:
         logging.basicConfig(
@@ -301,7 +310,8 @@ class App:
         if self.execution_params.download_dataset:
             self.download_bonds_dataset()
 
-        self.parse_bonds_dataset()
+        bonds = self.parse_bonds_dataset()
+        self.generate_file_tree(bonds)
 
         return 0
 
@@ -377,15 +387,51 @@ class App:
             raise RuntimeError("file_resp.content is None")
         self._bonds_dataset_file = BytesIO(content)
 
-    def parse_bonds_dataset(self) -> None:
+    def parse_bonds_dataset(self) -> list[bonds.Bond]:
         book = xlrd.open_workbook(file_contents=self._bonds_dataset_file.read())
 
-        bonds: dict[str, list[bonds.Bond]] = {}
+        bonds: list[bonds.Bond] = []
 
         for extractor_cls in EXTRACTORS:
             extractor = extractor_cls(book, self.get_bond_pdf)
             print("Extracting", extractor.TYPE_NAME, "bonds...")
-            bonds[extractor.TYPE_NAME] = extractor.extract_bonds()
+            bonds.extend(extractor.extract_bonds())
+
+        return bonds
+
+    def generate_file_tree(self, bonds: list[bonds.Bond]) -> None:
+        base_dir = self._file_tree_output
+        for bond in bonds:
+            month_dir = base_dir / bond.sale_to.strftime("%Y/%m")
+            metadata_path = month_dir / f"{bond.series_name}_metadata.json"
+            new_metadata = bond.to_json_dict()
+            try:
+                with open(metadata_path) as fp:
+                    old_metadata = json.load(fp)
+            except FileNotFoundError:
+                pass
+            else:
+                if old_metadata == new_metadata:
+                    print("No changes found for bond", bond.series_name)
+                    continue
+
+            month_dir.mkdir(parents=True, exist_ok=True)
+            with open(metadata_path, "w") as fp:
+                json.dump(new_metadata, fp, separators=(",", ":"))
+
+            for day_idx in range((bond.sale_to - bond.sale_from).days + 1):
+                offset = datetime.timedelta(days=day_idx)
+                day = bond.sale_from + offset
+                day_dir = base_dir / day.strftime("%Y/%m/%d")
+                day_dir.mkdir(parents=True, exist_ok=True)
+                data = [
+                    {"d": (date + offset).isoformat(), "v": str(value)}
+                    for date, value in bond.total_redemption_values.iter_with_dates()
+                ]
+                with open(
+                    day_dir / f"{bond.series_name}_total_redemption_values.json", "w"
+                ) as fp:
+                    json.dump(data, fp, separators=(",", ":"))
 
 
 def main() -> None:

@@ -2,7 +2,7 @@ import dataclasses
 import datetime
 from collections.abc import Iterator
 from decimal import Decimal
-from typing import overload
+from typing import Any, Self, overload
 
 
 @dataclasses.dataclass
@@ -20,11 +20,31 @@ class MonetaryValues:
     #: ``values[0]`` is value on the `start` day, values[-1] is value on the `end` day.
     values: list[Decimal] = dataclasses.field(default_factory=list[Decimal])
 
+    def to_json_dict(self) -> dict[str, Any]:
+        return {
+            "start": self.start.isoformat(),
+            "end": self.end.isoformat(),
+            "values": list(map(str, self.values)),
+        }
+
+    @classmethod
+    def from_json_dict(cls, data: dict[str, Any], /) -> Self:
+        return cls(
+            datetime.date.fromisoformat(data["start"]),
+            datetime.date.fromisoformat(data["stop"]),
+            list(map(Decimal, data["values"])),
+        )
+
     def __bool__(self) -> bool:
         return bool(self.values)
 
     def __iter__(self) -> Iterator[Decimal]:
         return iter(self.values)
+
+    def iter_with_dates(self) -> Iterator[tuple[datetime.date, Decimal]]:
+        start = self.start
+        for idx, value in enumerate(self.values):
+            yield start + datetime.timedelta(days=idx), value
 
     def __len__(self) -> int:
         return len(self.values)
