@@ -11,18 +11,26 @@ from io import BytesIO
 from pathlib import Path
 from types import TracebackType
 from typing import BinaryIO, ClassVar, Self, override
+from urllib.parse import urljoin
 
 import niquests
 import orjson
 import pypdfium2 as pdfium
 import xlrd
+from lxml import etree
 
 from . import bonds
 
-# The upside is that this is a JSON API, the downside is that data for the month
-# is published after it starts, while the bonds have already been announced before.
-# Data on https://www.gov.pl/web/finanse/obligacje-detaliczne1 does not have this delay.
-DATASET_RESOURCES_URL = "https://api.dane.gov.pl/1.4/datasets/805/resources"
+# The downside is that this is extracted from HTML and there's no API
+# but the upside is that it's not delayed like the data exposed through
+# https://api.dane.gov.pl/1.4/datasets/805/resources
+DATASET_SOURCE_URL = "https://www.gov.pl/web/finanse/obligacje-detaliczne1"
+DATASET_SOURCE_XPATH = (
+    ".//a["
+    " contains(@class, 'file-download')"
+    " and contains(@aria-label, 'Dane_dotyczace_obligacji_detalicznych.xls')"
+    "]/@href"
+)
 BOND_PDF_API_URL = "https://www.finanse.mf.gov.pl/dlug-publiczny/bony-i-obligacje-hurtowe/wyszukiwarka-listow-emisyjnych"
 # "nwarosłych" is a typo found in one of the PDFs
 EARLY_REDEMPTION_COST_RE = re.compile(
@@ -375,11 +383,14 @@ class App:
         return Pdf(path)
 
     def download_bonds_dataset(self) -> None:
-        resources_resp = self._session.get(DATASET_RESOURCES_URL)
-        resources = resources_resp.raise_for_status().json()["data"]
-        if len(resources) != 1:
-            raise RuntimeError("unexpected number of resources in the dataset")
-        download_url = resources[0]["attributes"]["download_url"]
+        source_resp = self._session.get(DATASET_SOURCE_URL).raise_for_status()
+        root = etree.HTML(source_resp.content)
+        links = root.xpath(DATASET_SOURCE_XPATH)
+        if len(links) != 1:
+            raise RuntimeError(
+                "unexpected number of matching links in the dataset source"
+            )
+        download_url = urljoin(DATASET_SOURCE_URL, links[0])
         log.info("Downloading dataset resource at %s...", download_url)
         file_resp = self._session.get(download_url)
         content = file_resp.content
