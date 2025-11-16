@@ -24,9 +24,10 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
-    "pyright>=1.1.406",
+    "pyright>=1.1.407",
     "pytest>=8.4.2",
     "ruff>=0.14.0",
+    "types-lxml>=2025.8.25",
 ]
 
 [tool.pyright]
