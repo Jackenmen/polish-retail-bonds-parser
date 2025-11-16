@@ -435,14 +435,22 @@ class App:
                 day = bond.sale_from + offset
                 day_dir = base_dir / day.strftime("%Y/%m/%d")
                 day_dir.mkdir(parents=True, exist_ok=True)
-                data = [
-                    {"d": (date + offset).isoformat(), "v": str(value)}
-                    for date, value in bond.total_redemption_values.iter_with_dates()
-                ]
-                with open(
-                    day_dir / f"{bond.series_name}_total_redemption_values.json", "wb"
-                ) as fp:
-                    fp.write(orjson.dumps(data))
+
+                for values_name, values in (
+                    ("earned_interest_values", bond.earned_interest_values),
+                    ("accrued_interest_values", bond.accrued_interest_values),
+                    ("paid_interest_values", bond.paid_interest_values),
+                    ("total_values", bond.total_values),
+                    ("total_redemption_values", bond.total_redemption_values),
+                ):
+                    data = [
+                        {"d": (date + offset).isoformat(), "v": str(value)}
+                        for date, value in values.iter_with_dates()
+                    ]
+                    with open(
+                        day_dir / f"{bond.series_name}_{values_name}.json", "wb"
+                    ) as fp:
+                        fp.write(orjson.dumps(data))
 
 
 def main() -> None:
