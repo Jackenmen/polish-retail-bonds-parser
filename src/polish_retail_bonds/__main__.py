@@ -4,7 +4,7 @@ import datetime
 import logging
 import re
 from abc import ABC, abstractmethod
-from collections.abc import Callable, Generator, Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from decimal import Decimal
 from functools import cached_property
 from io import BytesIO
@@ -148,7 +148,7 @@ class BondExtractor(ABC):
         start_col_idx = self._row_names.index("Pocz\u0105tek sprzeda\u017cy")
         end_col_idx = self._row_names.index("Koniec sprzeda\u017cy")
 
-        rows: Generator[list[xlrd.sheet.Cell]] = self._sheet.get_rows()  # pyright: ignore[reportAssignmentType]
+        rows = self._sheet.get_rows()
         # skip multi-row headers
         for _ in range(self.HEADER_ROW_COUNT):
             next(rows)
@@ -165,8 +165,12 @@ class BondExtractor(ABC):
             assert isinstance(end_value, float)
             sale_to = xlrd.xldate_as_datetime(end_value, 0).date()
 
-            series_name = row[series_col_idx].value.strip()
-            isin = row[isin_col_idx].value.strip()
+            series_name = row[series_col_idx].value
+            assert isinstance(series_name, str)
+            series_name = series_name.strip()
+            isin = row[isin_col_idx].value
+            assert isinstance(isin, str)
+            isin = isin.strip()
             bond = self.create_bond(
                 series_name=series_name,
                 isin=isin,
@@ -384,6 +388,7 @@ class App:
 
     def download_bonds_dataset(self) -> None:
         source_resp = self._session.get(DATASET_SOURCE_URL).raise_for_status()
+        assert source_resp.content is not None
         root = etree.HTML(source_resp.content)
         links = root.xpath(DATASET_SOURCE_XPATH)
         if len(links) != 1:
