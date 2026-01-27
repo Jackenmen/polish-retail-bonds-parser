@@ -83,6 +83,20 @@ class Pdf:
     def __init__(self, path: Path) -> None:
         self._pdf_doc = pdfium.PdfDocument(path)
 
+    def __enter__(self) -> Self:
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException],
+        exc_value: BaseException,
+        traceback: TracebackType,
+    ) -> None:
+        self.close()
+
+    def close(self) -> None:
+        self._pdf_doc.close()
+
     @cached_property
     def content(self) -> str:
         pages: list[str] = []
@@ -115,16 +129,16 @@ class BondExtractor(ABC):
         ]
 
     def ensure_min_sell_value_at_nominal(self, series_name: str, isin: str) -> None:
-        pdf = self._get_bond_pdf_func(series_name, isin)
-        match = MIN_SELL_VALUE_AT_NOMINAL_RE.search(pdf.content)
+        with self._get_bond_pdf_func(series_name, isin) as pdf:
+            match = MIN_SELL_VALUE_AT_NOMINAL_RE.search(pdf.content)
         if match is None:
             raise RuntimeError(
                 f"could not find 'minimum sell value at nominal' clause for {isin}"
             )
 
     def get_early_redemption_cost(self, series_name: str, isin: str) -> Decimal:
-        pdf = self._get_bond_pdf_func(series_name, isin)
-        match = EARLY_REDEMPTION_COST_RE.search(pdf.content)
+        with self._get_bond_pdf_func(series_name, isin) as pdf:
+            match = EARLY_REDEMPTION_COST_RE.search(pdf.content)
         if match is None:
             raise RuntimeError(f"could not find early redemption cost for {isin}")
         return Decimal(match.group(2).replace(",", "."))
