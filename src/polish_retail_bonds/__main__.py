@@ -370,7 +370,7 @@ class App:
             try:
                 bond_data = resp.json()[0]
             except IndexError:
-                print(f"no bond_data for isin {isin}")
+                log.warn("no bond_data for isin %s", isin)
             else:
                 break
         else:
@@ -424,7 +424,7 @@ class App:
 
         for extractor_cls in EXTRACTORS:
             extractor = extractor_cls(book, self.get_bond_pdf)
-            print("Extracting", extractor.TYPE_NAME, "bonds...")
+            log.info("Extracting %s bonds...", extractor.TYPE_NAME)
             bonds.extend(extractor.extract_bonds())
 
         return bonds
@@ -442,7 +442,7 @@ class App:
                 pass
             else:
                 if old_metadata == new_metadata:
-                    print("No changes found for bond", bond.series_name)
+                    log.info("No changes found for bond %s", bond.series_name)
                     continue
 
             month_dir.mkdir(parents=True, exist_ok=True)
