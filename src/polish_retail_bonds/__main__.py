@@ -370,7 +370,7 @@ class App:
             try:
                 bond_data = resp.json()[0]
             except IndexError:
-                log.warn("no bond_data for isin %s", isin)
+                log.warning("no bond_data for isin %s", isin)
             else:
                 break
         else:
