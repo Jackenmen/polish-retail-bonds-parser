@@ -79,6 +79,14 @@ MIN_SELL_VALUE_AT_NOMINAL_RE = re.compile(
 log = logging.getLogger()
 
 
+class PdfLoadError(Exception):
+    """Failed to load a PDF document."""
+
+
+class BondPdfApiResponseError(Exception):
+    """PDF API gave an unexpected response."""
+
+
 @dataclasses.dataclass(kw_only=True)
 class ExecutionParams:
     download_dataset: bool = True
@@ -86,7 +94,10 @@ class ExecutionParams:
 
 class Pdf:
     def __init__(self, path: Path) -> None:
-        self._pdf_doc = pdfium.PdfDocument(path)
+        try:
+            self._pdf_doc = pdfium.PdfDocument(path)
+        except pdfium.PdfiumError as exc:
+            raise PdfLoadError(f"Failed to load PDF from {path}") from exc
 
     def __enter__(self) -> Self:
         return self
@@ -376,6 +387,12 @@ class App:
                 bond_data = resp.json()[0]
             except IndexError:
                 log.warning("no bond_data for isin %s", isin)
+            except niquests.JSONDecodeError as exc:
+                raise BondPdfApiResponseError(
+                    "Response to request could not be decoded as valid JSON.\n"
+                    f"request data: {data!r}"
+                    f"response body: {resp.text()!r}"
+                ) from exc
             else:
                 break
         else:
@@ -397,11 +414,16 @@ class App:
                 f"unexpected number of files in bond_data for isin {isin}: {bond_data}"
             )
 
+        filename = files[0]
         resp = self._session.get(
-            BOND_PDF_API_URL, params={**params, "fileName": files[0]}
+            BOND_PDF_API_URL, params={**params, "fileName": filename}, stream=True
         ).raise_for_status()
         with open(path, "wb") as fp:
             fp.writelines(resp.iter_content(chunk_size=128))
+            if not fp.tell():
+                raise BondPdfApiResponseError(
+                    f"The {filename} returned by the PDF API is empty."
+                )
 
         return Pdf(path)
 
