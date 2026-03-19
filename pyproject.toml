@@ -112,9 +112,6 @@ ignore = [
     # `assert` is expected to be used in code (to appease type checkers)
     "S101",
 ]
-exclude = [
-    "stubs/**.py",
-]
 preview = true
 explicit-preview-rules = true
 

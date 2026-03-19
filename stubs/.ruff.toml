@@ -1,0 +1,10 @@
+extend = "../pyproject.toml"
+
+[lint]
+select = [
+    # pycodestyle rules
+    "E",
+    "W",
+    # import sorting
+    "I",
+]

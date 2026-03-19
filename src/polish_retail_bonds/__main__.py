@@ -391,7 +391,7 @@ class App:
                 raise BondPdfApiResponseError(
                     "Response to request could not be decoded as valid JSON.\n"
                     f"request data: {data!r}"
-                    f"response body: {resp.text()!r}"
+                    f"response body: {resp.text!r}"
                 ) from exc
             else:
                 break
