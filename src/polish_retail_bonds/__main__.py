@@ -21,6 +21,8 @@ from lxml import etree
 
 from . import bonds
 
+_ZWSP = "\N{ZERO WIDTH SPACE}"
+
 # The downside is that this is extracted from HTML and there's no API
 # but the upside is that it's not delayed like the data exposed through
 # https://api.dane.gov.pl/1.4/datasets/805/resources
@@ -28,7 +30,10 @@ DATASET_SOURCE_URL = "https://www.gov.pl/web/finanse/obligacje-detaliczne1"
 DATASET_SOURCE_XPATH = (
     ".//a["
     " contains(@class, 'file-download')"
-    " and contains(@aria-label, 'Dane_dotyczace_obligacji_detalicznych.xls')"
+    " and descendant::span["
+    "  contains(@class, 'extension')"
+    f" and text() = 'Dane{_ZWSP}_dotyczace{_ZWSP}_obligacji{_ZWSP}_detalicznych.xls'"
+    " ]"
     "]/@href"
 )
 BOND_PDF_API_URL = "https://www.finanse.mf.gov.pl/dlug-publiczny/bony-i-obligacje-hurtowe/wyszukiwarka-listow-emisyjnych"
